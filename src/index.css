@@ -1,61 +1,21 @@
-html, body, #root {
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-  color: #ffffff !important;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  
-  /* Imagen colocada directamente en la carpeta public/ */
-  background: linear-gradient(rgba(18, 18, 18, 0.88), rgba(18, 18, 18, 0.88)), 
-              url('/barberia.jfif') no-repeat center center fixed;
-  background-size: cover;
-}
-/* Variables de color */
-:root {
-  --bg-dark: #121212;
-  --bg-card: #1e1e1e;
-  --accent-gold: #d4af37;
-  --accent-gold-hover: #f3ce56;
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #F7F5F0;
+    --bg-dark: #0D1B1E;
+    --accent-copper: #C88A58;
+  }
+
+  body {
+    background-color: #F7F5F0;
+    color: #0D1B1E;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
 }
 
-/* Tarjetas personalizadas con efecto hover */
-.custom-card {
-  background-color: var(--bg-card) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(212, 175, 55, 0.2) !important;
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.custom-card:hover, .custom-card.selected {
-  border-color: var(--accent-gold) !important;
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(212, 175, 55, 0.2);
-}
-
-/* Botones principales con estilo dorado */
-.btn-gold {
-  background-color: var(--accent-gold) !important;
-  color: #000000 !important;
-  font-weight: 700;
-  border: none;
-}
-
-.btn-gold:hover {
-  background-color: var(--accent-gold-hover) !important;
-  color: #000000 !important;
-}
-
-/* Campos de formulario oscuros */
-.form-control, .form-select {
-  background-color: #1a1a1a !important;
-  color: #ffffff !important;
-  border-color: #333333 !important;
-}
-
-.form-control:focus, .form-select:focus {
-  background-color: #1a1a1a !important;
-  color: #ffffff !important;
-  border-color: var(--accent-gold) !important;
-  box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.25);
+.glass-dark {
+  background: rgba(13, 27, 30, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }

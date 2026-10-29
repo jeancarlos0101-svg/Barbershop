@@ -1,367 +1,164 @@
 import React, { useState } from 'react';
-import { SERVICES, BARBERS } from './data/mockData';
-import Swal from 'sweetalert2';
+import { Navbar } from './Components/Navbar';
+import { WhatsAppButton } from './Components/WhatsAppButton';
+import { SINGLE_CABIN } from './data/cabinData';
+import { translations } from './data/translations';
 
 export default function App() {
-  const [step, setStep] = useState(1);
-  const [selectedService, setSelectedService] = useState(null);
-  const [selectedBarber, setSelectedBarber] = useState(null);
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
-  const [clientData, setClientData] = useState({ name: '', phone: '', notes: '' });
-  const [confirmedDetails, setConfirmedDetails] = useState(null);
+  const [lang, setLang] = useState('es');
+  const t = translations[lang];
 
-  // Generar lista de los próximos 7 días a partir de hoy
-  const getNextDays = () => {
-    const days = [];
-    const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
+  const [guests, setGuests] = useState(1);
+  const [activeImage, setActiveImage] = useState(0);
 
-    for (let i = 0; i < 7; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const fullDate = `${year}-${month}-${day}`;
-
-      days.push({
-        fullDate,
-        dayName: daysOfWeek[d.getDay()],
-        dayNumber: d.getDate(),
-        monthName: months[d.getMonth()],
-        dayOfWeekIndex: d.getDay(),
-        isSunday: d.getDay() === 0
-      });
-    }
-
-    return days;
-  };
-
-  const nextDaysList = getNextDays();
-
-  // Generar horarios según la fecha seleccionada
-  const getAvailableTimeSlots = (dateString) => {
-    if (!dateString) return [];
-    
-    const [year, month, day] = dateString.split('-').map(Number);
-    const dateObj = new Date(year, month - 1, day);
-    const dayOfWeek = dateObj.getDay();
-
-    if (dayOfWeek === 0) return []; // Domingo cerrado
-
-    let slots = [];
-    let startHour = 9; // 9:00 AM
-    let endHour = dayOfWeek === 6 ? 14 : 21; // Sábado hasta las 2:00 PM (14:00), L-V hasta las 9:00 PM (21:00)
-
-    for (let h = startHour; h < endHour; h++) {
-      if (h === 12) continue; // Bloquear hora de almuerzo (12:00 PM a 1:00 PM)
-
-      let hourFormatted = h;
-      let ampm = 'AM';
-      if (h >= 12) {
-        ampm = 'PM';
-        if (h > 12) hourFormatted = h - 12;
-      }
-
-      slots.push(`${hourFormatted < 10 ? '0' + hourFormatted : hourFormatted}:00 ${ampm}`);
-    }
-
-    return slots;
-  };
-
-  // Descarga de evento .ics para el calendario del teléfono
-  const downloadCalendarEvent = () => {
-    if (!confirmedDetails) return;
-
-    const { service, barber, date, time, client } = confirmedDetails;
-    
-    const icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'BEGIN:VEVENT',
-      `SUMMARY:Cita Barbería - ${service.name}`,
-      `DESCRIPTION:Cita con ${barber.name}. Cliente: ${client.name} (${client.phone})`,
-      `DTSTART:${date.replace(/-/g, '')}T100000Z`,
-      `DTEND:${date.replace(/-/g, '')}T110000Z`,
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].join('\n');
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.setAttribute('download', 'cita-barberia.ics');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleCompleteBooking = (e) => {
+  const handleBooking = (e) => {
     e.preventDefault();
-    const appointmentCode = 'BSG-' + Math.floor(1000 + Math.random() * 9000);
-    
-    const details = {
-      code: appointmentCode,
-      service: selectedService,
-      barber: selectedBarber,
-      date: selectedDate,
-      time: selectedTime,
-      client: clientData
-    };
-    
-    setConfirmedDetails(details);
-
-    const barberPhone = "50688888888";
-    const message = `Hola ${selectedBarber.name}, he reservado una cita:\n\n* Código: ${appointmentCode}\n* Servicio: ${selectedService.name}\n* Fecha: ${selectedDate} a las ${selectedTime}\n* Cliente: ${clientData.name} (${clientData.phone})`;
-    const whatsappUrl = `https://wa.me/${barberPhone}?text=${encodeURIComponent(message)}`;
-
-    Swal.fire({
-      title: '<span style="color: #d4af37">¡Cita Confirmada!</span>',
-      html: `<div style="color: #a0a0a0; text-align: left; padding: 10px;">
-        <p>Código de reserva: <b style="color: #ffffff">${appointmentCode}</b></p>
-        <p>Servicio: <b style="color: #ffffff">${selectedService.name}</b></p>
-        <p>Barbero: <b style="color: #ffffff">${selectedBarber.name}</b></p>
-        <p>Fecha y Hora: <b style="color: #ffffff">${selectedDate} a las ${selectedTime}</b></p>
-      </div>`,
-      icon: 'success',
-      background: '#1e1e1e',
-      confirmButtonColor: '#d4af37',
-      confirmButtonText: '<span style="color: #000; font-weight: bold;">Entendido</span>'
-    });
-
+    const bookingMsg = lang === 'es'
+      ? `Hola! Quisiera reservar ${SINGLE_CABIN.name} del ${checkIn} al ${checkOut} para ${guests} persona(s).`
+      : `Hello! I would like to book ${SINGLE_CABIN.name} from ${checkIn} to ${checkOut} for ${guests} guest(s).`;
+      
+    const whatsappUrl = `https://wa.me/50688888888?text=${encodeURIComponent(bookingMsg)}`;
     window.open(whatsappUrl, '_blank');
-    setStep(5);
   };
-
-  const availableSlots = getAvailableTimeSlots(selectedDate);
 
   return (
-    <div className="text-white min-vh-100 py-5">
-      <div className="container">
+    <div className="min-h-screen flex flex-col bg-[#F7F5F0] text-[#0D1B1E] relative">
+      <Navbar lang={lang} setLang={setLang} />
+
+      {/* Hero Section */}
+      <section id="experiencia" className="relative h-[85vh] flex items-center justify-center px-6 overflow-hidden bg-[#0D1B1E] pt-20">
+        <img 
+          src={SINGLE_CABIN.images[activeImage]} 
+          alt={SINGLE_CABIN.name}
+          className="absolute inset-0 w-full h-full object-cover opacity-50 scale-105 transition-all duration-700"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0D1B1E] via-transparent to-black/30"></div>
         
-        {/* Cabecera */}
-        <header className="text-center mb-5">
-          <h1 className="fw-bold text-warning display-5 tracking-wide">BARBER STUDIO & GROOMING</h1>
-          <p className="text-secondary">Selecciona los detalles de tu experiencia</p>
-        </header>
-
-        {/* Indicador de Pasos */}
-        {step < 5 && (
-          <div className="row justify-content-center mb-5">
-            <div className="col-lg-8">
-              <div className="d-flex justify-content-between text-center gap-2">
-                <div className={`flex-fill p-2 rounded ${step >= 1 ? 'bg-warning text-dark fw-bold' : 'bg-secondary text-white opacity-50'}`}>1. Servicio</div>
-                <div className={`flex-fill p-2 rounded ${step >= 2 ? 'bg-warning text-dark fw-bold' : 'bg-secondary text-white opacity-50'}`}>2. Barbero</div>
-                <div className={`flex-fill p-2 rounded ${step >= 3 ? 'bg-warning text-dark fw-bold' : 'bg-secondary text-white opacity-50'}`}>3. Fecha y Hora</div>
-                <div className={`flex-fill p-2 rounded ${step >= 4 ? 'bg-warning text-dark fw-bold' : 'bg-secondary text-white opacity-50'}`}>4. Datos</div>
-              </div>
-            </div>
+        <div className="relative z-10 max-w-4xl text-center text-white">
+          <span className="text-xs uppercase tracking-[0.3em] text-[#C88A58] mb-4 block font-semibold">
+            {t.hero.tagline}
+          </span>
+          <h1 className="text-5xl md:text-7xl font-serif-custom leading-tight mb-6">
+            {SINGLE_CABIN.name}
+          </h1>
+          <div className="flex items-center justify-center gap-4 text-sm font-light text-gray-200">
+            <span>★ {SINGLE_CABIN.rating} ({SINGLE_CABIN.reviewsCount} {t.hero.rating})</span>
+            <span>•</span>
+            <span className="text-[#C88A58] font-semibold text-lg">${SINGLE_CABIN.priceNight} <span className="text-xs text-gray-300 font-normal">{t.booking.night}</span></span>
           </div>
-        )}
+        </div>
+      </section>
 
-        {/* Paso 1: Servicios */}
-        {step === 1 && (
-          <div className="row g-4 justify-content-center">
-            <div className="col-12"><h3 className="mb-3 text-warning border-bottom border-secondary pb-2">1. Selecciona un Servicio</h3></div>
-            {SERVICES.map((item) => (
-              <div key={item.id} className="col-md-4">
-                <div 
-                  className={`card custom-card h-100 p-3 ${selectedService?.id === item.id ? 'selected border-warning' : ''}`}
-                  onClick={() => setSelectedService(item)}
+      {/* Main Content & Booking Section */}
+      <section id="cabinas" className="py-20 max-w-7xl mx-auto px-8 w-full grid grid-cols-1 lg:grid-cols-3 gap-12">
+        
+        {/* Left Col: Details & Gallery */}
+        <div className="lg:col-span-2 space-y-12">
+          <div className="space-y-4">
+            <div className="h-[450px] rounded-3xl overflow-hidden shadow-lg">
+              <img src={SINGLE_CABIN.images[activeImage]} alt="Cabina Vista" className="w-full h-full object-cover" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {SINGLE_CABIN.images.map((img, idx) => (
+                <button 
+                  key={idx} 
+                  onClick={() => setActiveImage(idx)}
+                  className={`h-28 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${activeImage === idx ? 'border-[#C88A58] opacity-100 scale-95' : 'border-transparent opacity-60 hover:opacity-100'}`}
                 >
-                  <div className="card-body d-flex flex-column justify-content-between">
-                    <div>
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <h5 className="card-title text-warning m-0">{item.name}</h5>
-                        {item.badge && <span className="badge bg-warning text-dark">{item.badge}</span>}
-                      </div>
-                      <p className="card-text text-secondary small">{item.description}</p>
-                    </div>
-                    <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary">
-                      <span className="fw-bold fs-4 text-warning">₡{item.price.toLocaleString()}</span>
-                      <span className="text-secondary small"><i className="bi bi-clock me-1"></i>{item.duration} min</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div className="col-12 text-end mt-4">
-              <button className="btn btn-gold btn-lg px-4" disabled={!selectedService} onClick={() => setStep(2)}>
-                Siguiente <i className="bi bi-arrow-right ms-2"></i>
-              </button>
+                  <img src={img} alt="Thumbnail" className="w-full h-full object-cover" />
+                </button>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* Paso 2: Barberos */}
-        {step === 2 && (
-          <div className="row g-4 justify-content-center">
-            <div className="col-12"><h3 className="mb-3 text-warning border-bottom border-secondary pb-2">2. Selecciona tu Barbero</h3></div>
-            {BARBERS.map((barber) => (
-              <div key={barber.id} className="col-md-4">
-                <div 
-                  className={`card custom-card h-100 p-4 text-center ${selectedBarber?.id === barber.id ? 'selected border-warning' : ''}`}
-                  onClick={() => setSelectedBarber(barber)}
+          <div>
+            <h2 className="text-3xl font-serif-custom font-bold mb-4">{t.details.title}</h2>
+            <p className="text-gray-600 leading-relaxed text-sm md:text-base font-light">
+              {t.details.description}
+            </p>
+          </div>
+
+          <div id="filosofia">
+            <h3 className="text-xl font-serif-custom font-bold mb-6">{t.details.amenitiesTitle}</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {t.details.features.map((feat, idx) => (
+                <div key={idx} className="p-4 bg-white rounded-2xl border border-[#0D1B1E]/5 text-xs font-semibold flex items-center gap-3 shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-[#C88A58]"></span>
+                  {feat}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Col: Direct Booking Sticky Card */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-28 bg-white rounded-3xl p-8 shadow-xl border border-[#0D1B1E]/5">
+            <div className="flex justify-between items-baseline mb-6 pb-4 border-b border-gray-100">
+              <div>
+                <span className="text-2xl font-serif-custom font-bold text-[#0D1B1E]">${SINGLE_CABIN.priceNight}</span>
+                <span className="text-xs text-gray-500 ml-1">{t.booking.night}</span>
+              </div>
+              <span className="text-xs font-semibold text-[#C88A58]">★ {SINGLE_CABIN.rating}</span>
+            </div>
+
+            <form onSubmit={handleBooking} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">{t.booking.checkIn}</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={checkIn}
+                    onChange={(e) => setCheckIn(e.target.value)}
+                    className="w-full p-3 bg-[#F7F5F0] rounded-xl text-xs border-0 focus:ring-2 focus:ring-[#C88A58] outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">{t.booking.checkOut}</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={checkOut}
+                    onChange={(e) => setCheckOut(e.target.value)}
+                    className="w-full p-3 bg-[#F7F5F0] rounded-xl text-xs border-0 focus:ring-2 focus:ring-[#C88A58] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">{t.booking.guests}</label>
+                <select 
+                  value={guests} 
+                  onChange={(e) => setGuests(e.target.value)}
+                  className="w-full p-3 bg-[#F7F5F0] rounded-xl text-xs border-0 focus:ring-2 focus:ring-[#C88A58] outline-none"
                 >
-                  <img src={barber.avatar} className="rounded-circle mx-auto mb-3 border border-warning p-1" width="90" height="90" alt={barber.name} style={{objectFit: 'cover'}} />
-                  <h5 className="text-white">{barber.name}</h5>
-                  <p className="text-secondary small mb-2">{barber.role}</p>
-                  <div className="text-warning small"><i className="bi bi-star-fill"></i> {barber.rating}</div>
-                </div>
+                  <option value={1}>1 {t.booking.guestSingular}</option>
+                  <option value={2}>2 {t.booking.guestPlural}</option>
+                  <option value={3}>3 {t.booking.guestPlural}</option>
+                </select>
               </div>
-            ))}
-            <div className="col-12 d-flex justify-content-between mt-4">
-              <button className="btn btn-outline-light px-4" onClick={() => setStep(1)}><i className="bi bi-arrow-left me-2"></i> Atrás</button>
-              <button className="btn btn-gold btn-lg px-4" disabled={!selectedBarber} onClick={() => setStep(3)}>
-                Siguiente <i className="bi bi-arrow-right ms-2"></i>
+
+              <button 
+                type="submit"
+                className="w-full py-4 bg-[#C88A58] text-white font-semibold rounded-xl text-xs uppercase tracking-widest shadow-lg hover:bg-[#b07545] transition-colors mt-2 cursor-pointer"
+              >
+                {t.booking.submitBtn}
               </button>
-            </div>
+            </form>
+
+            <p className="text-[11px] text-center text-gray-400 mt-4 leading-relaxed">
+              {t.booking.notice}
+            </p>
           </div>
-        )}
+        </div>
 
-        {/* Paso 3: Selección de Fecha e Hora mediante Tarjetas/Botones */}
-        {step === 3 && (
-          <div className="row g-4 justify-content-center">
-            <div className="col-12"><h3 className="mb-3 text-warning border-bottom border-secondary pb-2">3. Elige Fecha y Horario</h3></div>
-            
-            {/* 3A. Selección de Día por Botones/Tarjetas */}
-            <div className="col-12 mb-3">
-              <label className="form-label text-secondary mb-3"><i className="bi bi-calendar3 me-2"></i>Selecciona un Día (Próximos 7 días):</label>
-              <div className="row row-cols-2 row-cols-sm-3 row-cols-md-7 g-2">
-                {nextDaysList.map((dayItem) => {
-                  const isSelected = selectedDate === dayItem.fullDate;
-                  return (
-                    <div key={dayItem.fullDate} className="col">
-                      <button
-                        type="button"
-                        disabled={dayItem.isSunday}
-                        onClick={() => {
-                          setSelectedDate(dayItem.fullDate);
-                          setSelectedTime(''); // Reiniciar hora seleccionada
-                        }}
-                        className={`btn w-100 p-3 text-center border transition-all ${
-                          dayItem.isSunday 
-                            ? 'btn-outline-secondary opacity-50 cursor-not-allowed' 
-                            : isSelected 
-                              ? 'btn-warning text-dark font-weight-bold shadow' 
-                              : 'btn-outline-warning text-white'
-                        }`}
-                      >
-                        <div className="small text-uppercase fw-bold">{dayItem.dayName}</div>
-                        <div className="fs-3 fw-bold">{dayItem.dayNumber}</div>
-                        <div className="small">{dayItem.monthName}</div>
-                        {dayItem.isSunday && <div className="badge bg-danger mt-1 text-white" style={{fontSize: '9px'}}>Cerrado</div>}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+      </section>
 
-            {/* 3B. Selección de Hora por Botones */}
-            <div className="col-12 mt-4">
-              <label className="form-label text-secondary mb-3"><i className="bi bi-clock me-2"></i>Horarios Disponibles:</label>
-              
-              {!selectedDate ? (
-                <div className="alert alert-dark border-secondary text-secondary">
-                  <i className="bi bi-info-circle me-2"></i> Por favor, selecciona un día arriba para ver los horarios.
-                </div>
-              ) : availableSlots.length === 0 ? (
-                <div className="alert alert-danger bg-dark border-danger text-danger">
-                  <i className="bi bi-exclamation-triangle me-2"></i> No hay horarios disponibles para la fecha seleccionada.
-                </div>
-              ) : (
-                <div className="d-flex flex-wrap gap-2">
-                  {availableSlots.map((slot) => (
-                    <button 
-                      key={slot} 
-                      type="button"
-                      className={`btn btn-lg px-3 py-2 ${selectedTime === slot ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary text-white'}`}
-                      onClick={() => setSelectedTime(slot)}
-                    >
-                      {slot}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="col-12 d-flex justify-content-between mt-4">
-              <button className="btn btn-outline-light px-4" onClick={() => setStep(2)}><i className="bi bi-arrow-left me-2"></i> Atrás</button>
-              <button className="btn btn-gold btn-lg px-4" disabled={!selectedDate || !selectedTime} onClick={() => setStep(4)}>
-                Siguiente <i className="bi bi-arrow-right ms-2"></i>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Paso 4: Datos y Confirmación */}
-        {step === 4 && (
-          <form onSubmit={handleCompleteBooking} className="row justify-content-center">
-            <div className="col-md-6">
-              <h3 className="mb-3 text-warning border-bottom border-secondary pb-2">4. Tus Datos de Contacto</h3>
-              <div className="mb-3">
-                <label className="form-label text-secondary">Nombre Completo</label>
-                <input 
-                  type="text" 
-                  required 
-                  className="form-control"
-                  placeholder="Ej. Juan Pérez"
-                  onChange={(e) => setClientData({ ...clientData, name: e.target.value })}
-                />
-              </div>
-              <div className="mb-4">
-                <label className="form-label text-secondary">Teléfono (WhatsApp)</label>
-                <input 
-                  type="tel" 
-                  required 
-                  className="form-control"
-                  placeholder="Ej. 8888-8888"
-                  onChange={(e) => setClientData({ ...clientData, phone: e.target.value })}
-                />
-              </div>
-              <div className="d-flex justify-content-between">
-                <button type="button" className="btn btn-outline-light px-4" onClick={() => setStep(3)}><i className="bi bi-arrow-left me-2"></i> Atrás</button>
-                <button type="submit" className="btn btn-gold btn-lg px-4">Confirmar Cita & Enviar WhatsApp</button>
-              </div>
-            </div>
-          </form>
-        )}
-
-        {/* Paso 5: Pantalla de Éxito */}
-        {step === 5 && confirmedDetails && (
-          <div className="row justify-content-center">
-            <div className="col-md-6 text-center">
-              <div className="card custom-card p-4 border-warning">
-                <div className="card-body">
-                  <i className="bi bi-check-circle-fill text-warning display-3 mb-3"></i>
-                  <h3 className="text-warning fw-bold mb-2">¡Reserva Exitosa!</h3>
-                  <p className="text-secondary mb-4">Se ha abierto WhatsApp automáticamente para notificar al barbero.</p>
-                  
-                  <div className="bg-dark p-3 rounded text-start mb-4 border border-secondary">
-                    <p className="mb-1"><strong>Código:</strong> <span className="text-warning">{confirmedDetails.code}</span></p>
-                    <p className="mb-1"><strong>Servicio:</strong> {confirmedDetails.service.name}</p>
-                    <p className="mb-1"><strong>Barbero:</strong> {confirmedDetails.barber.name}</p>
-                    <p className="mb-0"><strong>Fecha y Hora:</strong> {confirmedDetails.date} a las {confirmedDetails.time}</p>
-                  </div>
-
-                  <div className="d-grid gap-2">
-                    <button className="btn btn-gold btn-lg" onClick={downloadCalendarEvent}>
-                      <i className="bi bi-calendar-plus me-2"></i> Agregar a mi Calendario (Celular)
-                    </button>
-                    <button className="btn btn-outline-light" onClick={() => { setStep(1); setConfirmedDetails(null); setSelectedService(null); setSelectedBarber(null); setSelectedDate(''); setSelectedTime(''); }}>
-                      Reservar Otra Cita
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-      </div>
+      {/* Botón Flotante de WhatsApp */}
+      <WhatsAppButton lang={lang} message={t.whatsapp.message} />
     </div>
   );
 }
